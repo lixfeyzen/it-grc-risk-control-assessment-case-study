@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.db
+*.sqlite
+tmp/
+output/pdf/rendered/
