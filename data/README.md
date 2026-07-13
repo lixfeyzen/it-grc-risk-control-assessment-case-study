@@ -1,88 +1,24 @@
-# Data Source and Methodology
+# Data Layer
 
-## Overview
+All records in this folder are built from public sources or explicitly labelled analyst output.
 
-All datasets in this folder are synthetic and were created for portfolio demonstration. They model an internal academic services system and do not contain real student, employee, vendor, incident, access, payment, or audit data.
+## Source-derived tables
 
-## Dataset Files
+- `source_catalog.csv`: authoritative source inventory.
+- `incident_timeline.csv`: dated public events with classification, confidence, and source IDs.
+- `evidence_claims.csv`: claim register that distinguishes confirmed facts, attributed statements, third-party claims, and unknowns.
 
-| File | Rows | Purpose |
-|---|---:|---|
-| `asset_inventory.csv` | 12 | Defines in-scope assets, sensitivity, criticality, owners, dependencies, and key exposures. |
-| `risk_register.csv` | 15 | Defines risk statements, threats, vulnerabilities, impacts, scores, owners, responses, and priorities. |
-| `control_matrix.csv` | 15 | Defines control objectives, activities, owners, frequency, required evidence, and public framework themes. |
-| `control_assessment_results.csv` | 15 | Defines simulated test procedures, implementation, operating effectiveness, evidence status, findings, and severity. |
-| `remediation_plan_poam.csv` | 15 | Defines remediation actions, owners, target dates, dependencies, evidence requirements, and closure criteria. |
-| `evidence_tracker.csv` | 15 | Connects controls, assessments, and POA&M actions to required evidence without claiming evidence was collected. |
-| **Total** | **87** | Versioned CSV rows validated by `scripts/validate_project.py`. |
+## Analytical tables
 
-## Data Lineage
+- `control_observability.csv`: public-evidence mapping against regulatory or technical expectations. It does not test BSI's internal controls.
+- `recommendation_register.csv`: portfolio analyst recommendations. Every row is labelled `Analyst proposal - not a BSI commitment`.
 
-```text
-asset_inventory.csv
-        |
-        v
-risk_register.csv
-        |
-        v
-control_matrix.csv
-        |
-        v
-control_assessment_results.csv
-        |
-        v
-remediation_plan_poam.csv
-        |
-        v
-evidence_tracker.csv
-```
+## Integrity rules
 
-Each stage uses explicit identifiers. The validator confirms that asset, risk, control, assessment, POA&M, and evidence references resolve correctly.
+1. Every non-source table row must cite at least one valid `source_id`.
+2. Third-party breach claims must never be counted as confirmed facts.
+3. `Not publicly observable` must not be converted into `Failed` or `Missing control`.
+4. No row may assert an attack vector, forensic root cause, affected-record count, or internal test result unless a reviewed primary source supports it.
+5. Analyst recommendations must remain clearly separated from actions publicly attributed to BSI or OJK.
 
-## Scoring Rules
-
-- Likelihood uses a 1-to-5 scale.
-- Impact uses a 1-to-5 scale.
-- Inherent risk equals likelihood multiplied by impact.
-- Residual risk must not exceed inherent risk.
-- Priority is a simplified portfolio classification documented in the methodology.
-
-These scores demonstrate a risk-assessment workflow and are not calibrated to a real organization's risk appetite or loss model.
-
-## Evidence Rule
-
-No real evidence is stored in the repository. Every evidence-tracker row uses:
-
-```text
-Not collected - synthetic case study
-```
-
-The tracker records required evidence, evidence status, owner, frequency, finding, action, and target date. It does not invent logs, screenshots, approvals, tickets, or review dates.
-
-## Data Quality Rules
-
-The automated validator checks:
-
-- exact expected row counts,
-- unique primary identifiers,
-- non-orphan asset, risk, control, assessment, POA&M, and evidence links,
-- valid score ranges and inherent-risk calculations,
-- residual risk not exceeding inherent risk,
-- valid target dates,
-- allowed status values through SQLite constraints,
-- management KPI results,
-- and common secret patterns.
-
-## Regeneration
-
-`evidence_tracker.csv` is generated deterministically from the control, assessment, and POA&M datasets:
-
-```bash
-python scripts/generate_artifacts.py
-```
-
-The five upstream CSV datasets remain the authored source records.
-
-## Disclaimer
-
-The datasets do not demonstrate real audit work, real compliance, control effectiveness, or ISO/IEC 27001 conformity. They demonstrate structured IT GRC data design and analysis using a transparent synthetic scenario.
+See [`data_dictionary.md`](data_dictionary.md) for field definitions.

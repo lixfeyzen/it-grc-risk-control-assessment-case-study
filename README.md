@@ -1,223 +1,132 @@
-# IT GRC Risk & Control Assessment Case Study
+# Public-Evidence Banking Cyber Incident and IT GRC Assessment
 
-A synthetic, evidence-led IT Governance, Risk, and Compliance portfolio project for an internal academic services system.
+An independent portfolio project that reconstructs the May 2023 Bank Syariah Indonesia (BSI) service disruption from public evidence and evaluates what can - and cannot - be concluded about IT governance, cyber resilience, incident response, recovery, and data protection.
 
-The project demonstrates a complete assessment chain:
+> **Important:** This is not an audit of BSI, is not affiliated with BSI or OJK, and uses no internal or confidential data. It assesses public evidence only. A control marked `Not publicly observable` is not classified as failed.
 
-```text
-Asset inventory -> Risk register -> Control matrix -> Control assessment
--> Gap analysis -> POA&M -> Evidence tracker -> Management reporting
-```
+## Why this project is credible
 
-It uses public NIST, CIS, ISACA, ISO, and Indonesian legal references for methodology and context. It does **not** claim to be a real audit, certification assessment, legal opinion, or production engagement.
+- The incident is real and acknowledged in BSI's official disclosures.
+- The service-recovery timeline uses an official BSI press release and an OJK supervisory update.
+- The year-end incident statement comes from BSI's audited 2023 financial statements.
+- Regulatory expectations come from POJK No. 11/POJK.03/2022 and SEOJK No. 29/SEOJK.03/2022.
+- A Reuters report is used only to document a third-party LockBit claim, not to convert that claim into a verified fact.
+- Every analytical record contains one or more `source_id` values.
+- Unknown facts stay unknown; the project does not invent a root cause, attack vector, affected-record count, or control test result.
 
-## Project Snapshot
+## Case in plain language
 
-| Area | Result |
-|---|---:|
-| Assets in scope | 12 |
-| High-sensitivity assets | 6 |
-| High-criticality assets | 7 |
-| Risks assessed | 15 |
-| High-priority risks | 8 |
-| Controls assessed | 15 |
-| High-severity findings | 7 |
-| Evidence sets partial | 9 |
-| Evidence sets unavailable | 6 |
-| POA&M actions | 15 |
-| Open actions | 5 |
-| Actions in progress | 4 |
-| Planned actions | 6 |
-| CSV rows validated | 87 |
+BSI services were disrupted on 8 May 2023. BSI reported staged restoration and said on 11 May that branch, ATM, and mobile-banking services were normal. BSI also disclosed indications of a cyberattack and said audit and digital forensics were required. On 13 May, OJK reported progressive normalization and requested acceleration of the forensic audit. BSI's 2023 financial statements later recorded the cyber incident and stated that corrective action and cybersecurity enhancements had been performed.
 
-Assessment cut-off: **13 July 2026**.
+Public reporting also carried a LockBit data-exposure claim. This project records it as a **reported third-party claim**, because the reviewed primary sources do not publish a verified affected-record inventory or final forensic conclusion.
 
-## Executive Result
+## Analytical outputs
 
-The simulated control environment is not presented as compliant or audit-ready.
+### Incident timeline
 
-- `R-001` Privileged Access Management has the highest residual risk score at 15.
-- Eight risks have residual scores of 12 or higher.
-- Five controls are Missing or Weak, eight are Partial, and two are Planned.
-- No control is represented as fully evidenced in the baseline.
-- Every finding has a linked remediation action, owner, target date, evidence requirement, and closure criterion.
+![Public incident timeline](assets/incident_timeline.png)
 
-The management conclusion is **remediation required**, followed by control re-testing.
+### Evidence classification
 
-## Workflow
+![Evidence classification](assets/evidence_classification.png)
 
-![IT GRC assessment workflow](assets/grc_workflow.png)
+### Control observability
 
-## Risk and Control Posture
+![Control observability](assets/control_observability.png)
 
-### Risk heatmap
+### Proposed action priorities
 
-![Inherent risk heatmap](assets/risk_heatmap.png)
+![Recommendation priorities](assets/recommendation_priority.png)
 
-### Control implementation status
-
-![Control implementation status](assets/control_gap_summary.png)
-
-### Remediation portfolio
-
-![Remediation status summary](assets/remediation_status_summary.png)
-
-## Main Deliverables
+## Repository map
 
 | Artifact | Purpose |
 |---|---|
-| [`docs/01_case_brief.md`](docs/01_case_brief.md) | Defines the synthetic business problem, scope, stakeholders, and success criteria. |
-| [`data/asset_inventory.csv`](data/asset_inventory.csv) | Defines 12 in-scope assets and their sensitivity, criticality, owner, and dependencies. |
-| [`data/risk_register.csv`](data/risk_register.csv) | Records 15 risks with threat, vulnerability, impact, inherent risk, existing controls, and residual risk. |
-| [`data/control_matrix.csv`](data/control_matrix.csv) | Maps 15 controls to risks, assets, evidence, owners, frequencies, and public framework concepts. |
-| [`data/control_assessment_results.csv`](data/control_assessment_results.csv) | Documents simulated test procedures, evidence status, findings, severity, and recommendations. |
-| [`docs/07_gap_analysis.md`](docs/07_gap_analysis.md) | Converts assessment findings into current-vs-target gaps. |
-| [`data/remediation_plan_poam.csv`](data/remediation_plan_poam.csv) | Tracks actions, owners, target dates, dependencies, evidence, and closure criteria. |
-| [`data/evidence_tracker.csv`](data/evidence_tracker.csv) | Connects every control to required evidence without fabricating evidence files. |
-| [`sql/01_create_tables.sql`](sql/01_create_tables.sql) | Creates the validated SQLite schema, indexes, and management views. |
-| [`sql/03_grc_monitoring_queries.sql`](sql/03_grc_monitoring_queries.sql) | Provides eight management and traceability queries. |
-| [`docs/10_management_summary.md`](docs/10_management_summary.md) | Presents the executive conclusion, KPIs, priority findings, and decision sequence. |
-| [`output/pdf/IT_GRC_Project_Summary.pdf`](output/pdf/IT_GRC_Project_Summary.pdf) | Four-page recruiter and interview summary. |
+| [`data/source_catalog.csv`](data/source_catalog.csv) | Nine public sources with publisher, date, locator, URL, authority level, and intended use. |
+| [`data/incident_timeline.csv`](data/incident_timeline.csv) | Seven dated events reconstructed from BSI, OJK, the audited filing, and Reuters. |
+| [`data/evidence_claims.csv`](data/evidence_claims.csv) | Twelve claims classified as public fact, issuer/regulator statement, reported claim, or not publicly observable. |
+| [`data/control_observability.csv`](data/control_observability.csv) | Ten control domains mapped to Indonesian banking rules and public evidence. |
+| [`data/recommendation_register.csv`](data/recommendation_register.csv) | Eight analyst proposals with priority, horizon, evidence basis, references, deliverable, and ownership model. |
+| [`docs/01_scope_and_method.md`](docs/01_scope_and_method.md) | Scope boundary, research method, evidence hierarchy, and success criteria. |
+| [`docs/02_incident_timeline.md`](docs/02_incident_timeline.md) | Human-readable chronology and reconciliation of BSI and OJK recovery language. |
+| [`docs/03_evidence_register.md`](docs/03_evidence_register.md) | Claim-by-claim evidence interpretation and confidence rules. |
+| [`docs/04_control_observability_assessment.md`](docs/04_control_observability_assessment.md) | GRC assessment that avoids treating missing public disclosure as a failed internal control. |
+| [`docs/05_recommendation_register.md`](docs/05_recommendation_register.md) | Prioritized actions, proposed evidence, owners, and validation criteria. |
+| [`docs/06_interview_walkthrough.md`](docs/06_interview_walkthrough.md) | A concise way to explain the project in an IT Officer or IT GRC interview. |
+| [`docs/07_limitations_and_ethics.md`](docs/07_limitations_and_ethics.md) | Legal, ethical, evidentiary, and analytical limitations. |
+| [`sql/01_create_tables.sql`](sql/01_create_tables.sql) | SQLite schema and integrity constraints. |
+| [`sql/02_analysis_queries.sql`](sql/02_analysis_queries.sql) | Evidence coverage, timeline, observability, and recommendation queries. |
+| [`output/pdf/Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf`](output/pdf/Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf) | Five-page recruiter and interview summary. |
 
-## Evidence Integrity
-
-This repository does not contain real access exports, approvals, logs, tickets, backup results, vulnerability reports, or management sign-offs.
-
-The evidence tracker explicitly records:
+## Method
 
 ```text
-evidence_repository_path = Not collected - synthetic case study
+Public source collection
+        |
+        v
+Source authority and claim classification
+        |
+        v
+Event timeline and conflicting-statement reconciliation
+        |
+        v
+Regulatory control mapping
+        |
+        v
+Public observability assessment
+        |
+        v
+Evidence-based recommendations and management reporting
 ```
 
-This is intentional. The project demonstrates how evidence should be indexed, assigned, monitored, and linked to remediation without presenting invented artifacts as real audit evidence.
+The project deliberately assesses **observability**, not actual internal-control effectiveness. A public source can prove that an action was announced or observed; it normally cannot prove that a control was designed correctly, operated consistently, and passed independent testing.
 
-## SQL Monitoring Questions
+## Key findings
 
-The SQL layer answers practical management questions:
+- The disruption and cyber-incident status are supported by BSI's official disclosures and year-end filing.
+- BSI and OJK provide evidence of service recovery, forensic work, supervisory coordination, and public communication.
+- Public evidence does not establish the final forensic root cause, initial access vector, verified affected-data population, or results of internal control testing.
+- Of ten assessed control domains, two show an observable public action, three have partial public evidence, and five are not publicly observable.
+- The highest-priority analyst proposals focus on forensic closure, recovery metrics, ransomware scenario testing, and personal-data impact assessment.
 
-1. How many risks exist at each priority level?
-2. Which risks retain a residual score of 12 or higher?
-3. Which controls cannot be fully evidenced?
-4. Which POA&M items are closest to their target dates?
-5. Which owners carry the largest remediation workload?
-6. Which actions are due within 60 days of the assessment cut-off?
-7. Can each risk be traced through control, finding, remediation, and evidence?
-8. What is the compact management KPI position?
+## Source hierarchy
 
-## Run and Validate
+1. Primary issuer and regulator disclosures.
+2. Audited issuer filing.
+3. Binding Indonesian regulations and official technical standards.
+4. Reputable independent reporting for third-party claims only.
 
-Install dependencies:
+The complete source list is in [`data/source_catalog.csv`](data/source_catalog.csv). Core sources include:
 
-```bash
+- [BSI service recovery and cyber-incident indication](https://ir.bankbsi.co.id/newsroom/1a92cc8ca2_4364ce956d.pdf)
+- [OJK supervisory update, 13 May 2023](https://www.ojk.go.id/id/berita-dan-kegiatan/siaran-pers/Documents/Pages/Operasional-Bank-Syariah-Indonesia-Kembali-Normal-Masyarakat-Diminta-Tenang/SP%20-%20OPERASIONAL%20BANK%20SYARIAH%20INDONESIA%20KEMBALI%20NORMAL%20MASYARAKAT%20DIMINTA%20TENANG.pdf)
+- [BSI audited financial statements 2023, Note 47(f)](https://ir.bankbsi.co.id/misc/Laporan-Keuangan/Tahun-Laporan-2023/FY-2023.pdf)
+- [POJK No. 11/POJK.03/2022](https://ojk.go.id/id/regulasi/Documents/Pages/Penyelenggaraan-Teknologi-Informasi-Oleh-Bank-Umum/POJK%2011%20-%2003%20-%202022.pdf)
+- [SEOJK No. 29/SEOJK.03/2022](https://www.ojk.go.id/id/regulasi/Documents/Pages/Ketahanan-dan-Keamanan-Siber-Bagi-Bank-Umum/SEOJK%2029%20SEOJK.03%202022.pdf)
+- [Indonesia Personal Data Protection Law](https://peraturan.bpk.go.id/Details/229798/uu-no-27-tahun-2022)
+- [NIST SP 800-61 Rev. 3](https://csrc.nist.gov/pubs/sp/800/61/r3/final)
+- [NIST SP 800-184](https://csrc.nist.gov/pubs/sp/800/184/final)
+
+## Reproduce and validate
+
+```powershell
 python -m pip install -r requirements.txt
-```
-
-Generate the evidence tracker, visuals, and PDF:
-
-```bash
 python scripts/generate_artifacts.py
-```
-
-Run validation:
-
-```bash
 python scripts/validate_project.py
 ```
 
-Expected result:
+See [`RUNNING.md`](RUNNING.md) for Windows-specific instructions and expected output.
 
-```text
-validation=passed
-csv_rows=87
-relationship_checks=passed
-risk_score_checks=passed
-sql_schema_and_queries=passed
-secret_scan=passed
-```
+## Skills demonstrated
 
-See [`RUNNING.md`](RUNNING.md) for detailed instructions.
+- Open-source evidence collection and source evaluation
+- Incident timeline reconstruction
+- IT GRC and regulatory control mapping
+- Claim confidence and uncertainty management
+- SQL data modeling and monitoring queries
+- Remediation prioritization and evidence design
+- Executive reporting and audit-ready documentation
 
-## Public Methodology Sources
+## Honest boundary
 
-| Source | Use in this project |
-|---|---|
-| [NIST Cybersecurity Framework 2.0](https://www.nist.gov/cyberframework) | Governance, Identify, Protect, Detect, Respond, and Recover outcomes. |
-| [NIST SP 800-30 Rev. 1](https://csrc.nist.gov/pubs/sp/800/30/r1/final) | Risk assessment concepts and risk-informed response. |
-| [NIST SP 800-53 Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/r5/upd1/final) | Security and privacy control-family context. |
-| [NIST SP 800-53A Rev. 5](https://csrc.nist.gov/pubs/sp/800/53/a/r5/final) | Evidence-based control assessment method. |
-| [ISO/IEC 27001:2022 public overview](https://www.iso.org/standard/27001) | Public ISMS, risk-management, confidentiality, integrity, availability, and continual-improvement concepts. |
-| [CIS Critical Security Controls v8.1](https://www.cisecurity.org/controls) | Practical safeguard themes such as asset, access, log, recovery, and vulnerability management. |
-| [ISACA COBIT resources](https://www.isaca.org/resources/cobit) | Governance, ownership, monitoring, and management-reporting concepts. |
-| [Indonesia Law No. 27 of 2022](https://peraturan.bpk.go.id/Details/229798/uu-no-27-tahun-2022) | Personal-data protection context. |
-
-The project uses public, high-level ISO/IEC 27001 concepts only. It does not reproduce copyrighted standard text or claim clause-level conformity.
-
-## Repository Structure
-
-```text
-it-grc-risk-control-assessment-case-study/
-|-- README.md
-|-- RUNNING.md
-|-- requirements.txt
-|-- data/
-|   |-- asset_inventory.csv
-|   |-- risk_register.csv
-|   |-- control_matrix.csv
-|   |-- control_assessment_results.csv
-|   |-- remediation_plan_poam.csv
-|   `-- evidence_tracker.csv
-|-- docs/
-|   |-- 01_case_brief.md
-|   |-- 02_methodology_and_source_mapping.md
-|   |-- 03_scope_and_asset_inventory.md
-|   |-- 04_risk_register.md
-|   |-- 05_control_matrix.md
-|   |-- 06_control_assessment_results.md
-|   |-- 07_gap_analysis.md
-|   |-- 08_remediation_plan_poam.md
-|   |-- 09_evidence_tracker.md
-|   |-- 10_management_summary.md
-|   `-- 11_limitations_and_assumptions.md
-|-- evidence/
-|   `-- README.md
-|-- sql/
-|   |-- 01_create_tables.sql
-|   |-- 02_load_data.md
-|   `-- 03_grc_monitoring_queries.sql
-|-- scripts/
-|   |-- generate_artifacts.py
-|   `-- validate_project.py
-|-- assets/
-|   |-- grc_workflow.png
-|   |-- risk_heatmap.png
-|   |-- control_gap_summary.png
-|   `-- remediation_status_summary.png
-`-- output/pdf/
-    `-- IT_GRC_Project_Summary.pdf
-```
-
-## Scope Boundary
-
-This is a self-directed synthetic case study. It does not represent:
-
-- a real organization,
-- a legal or regulatory conclusion,
-- an ISO/IEC 27001 certification audit,
-- a COBIT capability assessment,
-- a penetration test,
-- professional audit work experience,
-- or a production GRC application.
-
-Detailed limitations are documented in [`docs/11_limitations_and_assumptions.md`](docs/11_limitations_and_assumptions.md).
-
-## Portfolio Positioning
-
-The project is designed to demonstrate junior-level capability in:
-
-- IT risk identification and scoring,
-- control design and mapping,
-- assessment procedures and evidence reasoning,
-- gap analysis and remediation planning,
-- SQL-based GRC monitoring,
-- management reporting,
-- and honest communication of limitations.
+This project does not prove that BSI failed or passed any specific control. It demonstrates how an analyst can turn a real public incident into a traceable, cautious, and decision-useful GRC assessment without fabricating confidential evidence.

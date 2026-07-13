@@ -1,61 +1,60 @@
-# Run and Verify the Project
+# Run and Validate
 
 ## Requirements
 
-- Python 3.10+
-- Packages in `requirements.txt`
+- Python 3.11 or later
+- `Pillow`, `reportlab`, and `pypdf`
+- Poppler only when re-rendering the PDF for visual inspection
 
-Install dependencies:
+## Install
 
-```bash
+```powershell
 python -m pip install -r requirements.txt
 ```
 
-## Generate the Evidence Tracker, Visuals, and PDF
+## Generate charts and PDF
 
-```bash
-python scripts/generate_artifacts.py
+```powershell
+python scripts\generate_artifacts.py
 ```
 
-Generated files:
+Expected files:
 
 ```text
-data/evidence_tracker.csv
-assets/grc_workflow.png
-assets/risk_heatmap.png
-assets/control_gap_summary.png
-assets/remediation_status_summary.png
-output/pdf/IT_GRC_Project_Summary.pdf
+assets/incident_timeline.png
+assets/evidence_classification.png
+assets/control_observability.png
+assets/recommendation_priority.png
+output/pdf/Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf
 ```
 
-## Validate the Project
+## Validate
 
-```bash
-python scripts/validate_project.py
+```powershell
+python scripts\validate_project.py
 ```
 
-The validator checks:
-
-- required dataset row counts,
-- duplicate identifiers,
-- asset-risk-control-assessment-POA&M-evidence relationships,
-- likelihood, impact, inherent-risk, and residual-risk logic,
-- ISO-formatted target dates,
-- SQLite table constraints and monitoring-query syntax,
-- expected management KPI results,
-- and common secret or private-key patterns.
-
-Expected final result:
+Expected result:
 
 ```text
 validation=passed
-csv_rows=87
-relationship_checks=passed
-risk_score_checks=passed
-sql_schema_and_queries=passed
+sources=9
+timeline_events=7
+evidence_claims=12
+control_domains=10
+recommendations=8
+source_traceability=passed
+claim_guardrails=passed
+sql_queries=passed
+artifact_integrity=passed
+markdown_links=passed
 secret_scan=passed
 ```
 
-## Important Boundary
+## Optional PDF visual check
 
-The project uses synthetic data. Running the generator or validator does not create real evidence, perform an audit, certify compliance, or test a production system.
+```powershell
+pdftoppm -png output\pdf\Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf tmp\pdfs\public-evidence-grc
+```
+
+Inspect every rendered page for clipped text, overlap, unreadable tables, or inconsistent spacing.

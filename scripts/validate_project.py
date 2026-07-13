@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate CSV integrity, SQL monitoring queries, and repository safety."""
+"""Validate real-source traceability, claim guardrails, SQL outputs, and artifacts."""
 
 from __future__ import annotations
 
@@ -8,31 +8,31 @@ import re
 import sqlite3
 from datetime import date
 from pathlib import Path
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
+
+from PIL import Image
+from pypdf import PdfReader
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA_DIR = ROOT / "data"
-SQL_DIR = ROOT / "sql"
+DATA = ROOT / "data"
+SQL = ROOT / "sql"
 
 SPECS = {
-    "asset_inventory.csv": ("asset_id", 12),
-    "risk_register.csv": ("risk_id", 15),
-    "control_matrix.csv": ("control_id", 15),
-    "control_assessment_results.csv": ("assessment_id", 15),
-    "remediation_plan_poam.csv": ("poam_id", 15),
-    "evidence_tracker.csv": ("evidence_id", 15),
+    "source_catalog.csv": ("source_id", 9),
+    "incident_timeline.csv": ("event_id", 7),
+    "evidence_claims.csv": ("claim_id", 12),
+    "control_observability.csv": ("control_id", 10),
+    "recommendation_register.csv": ("recommendation_id", 8),
 }
 
 
 def read_csv(name: str) -> list[dict[str, str]]:
-    path = DATA_DIR / name
-    if not path.exists():
-        raise AssertionError(f"Missing required dataset: {path.relative_to(ROOT)}")
+    path = DATA / name
+    assert path.exists(), f"Missing required dataset: {path.relative_to(ROOT)}"
     with path.open(encoding="utf-8-sig", newline="") as handle:
         rows = list(csv.DictReader(handle))
-    if not rows:
-        raise AssertionError(f"Dataset has no rows: {name}")
+    assert rows, f"Empty dataset: {name}"
     return rows
 
 
@@ -40,88 +40,196 @@ def split_ids(value: str) -> list[str]:
     return [item.strip() for item in value.split(";") if item.strip()]
 
 
-def assert_unique(rows: list[dict[str, str]], field: str, expected_count: int, name: str) -> None:
-    values = [row[field] for row in rows]
-    assert len(rows) == expected_count, f"{name}: expected {expected_count} rows, found {len(rows)}"
-    assert all(values), f"{name}: blank {field}"
-    assert len(values) == len(set(values)), f"{name}: duplicate {field}"
+def validate_shape(loaded: dict[str, list[dict[str, str]]]) -> None:
+    for name, (id_field, expected_count) in SPECS.items():
+        rows = loaded[name]
+        values = [row[id_field] for row in rows]
+        assert len(rows) == expected_count, f"{name}: expected {expected_count}, found {len(rows)}"
+        assert all(values), f"{name}: blank {id_field}"
+        assert len(values) == len(set(values)), f"{name}: duplicate {id_field}"
+        assert all(all(value.strip() for value in row.values()) for row in rows), f"{name}: blank cell"
 
 
-def validate_relationships(data: dict[str, list[dict[str, str]]]) -> None:
-    asset_ids = {row["asset_id"] for row in data["assets"]}
-    risk_ids = {row["risk_id"] for row in data["risks"]}
-    control_ids = {row["control_id"] for row in data["controls"]}
-    assessment_ids = {row["assessment_id"] for row in data["assessments"]}
-    poam_ids = {row["poam_id"] for row in data["poam"]}
+def validate_sources(data: dict[str, list[dict[str, str]]]) -> None:
+    sources = data["sources"]
+    source_ids = {row["source_id"] for row in sources}
+    allowed_domains = {
+        "ir.bankbsi.co.id",
+        "www.ojk.go.id",
+        "ojk.go.id",
+        "www.marketscreener.com",
+        "peraturan.bpk.go.id",
+        "csrc.nist.gov",
+    }
+    assert sum(row["authority_level"] == "Primary" for row in sources) == 8
+    assert sum(row["authority_level"] == "Secondary" for row in sources) == 1
+    for row in sources:
+        date.fromisoformat(row["publication_date"])
+        date.fromisoformat(row["accessed_date"])
+        parsed = urlparse(row["url"])
+        assert parsed.scheme == "https" and parsed.netloc in allowed_domains, f"Unapproved source URL: {row['url']}"
 
-    for row in data["risks"]:
-        assert set(split_ids(row["asset_id"])) <= asset_ids, f"{row['risk_id']}: unknown asset"
-        assert row["existing_control_id"] in control_ids, f"{row['risk_id']}: unknown control"
-        likelihood = int(row["likelihood_score"])
-        impact = int(row["impact_score"])
-        inherent = int(row["inherent_risk_score"])
-        residual = int(row["residual_risk_score"])
-        assert 1 <= likelihood <= 5 and 1 <= impact <= 5, f"{row['risk_id']}: score outside 1-5"
-        assert inherent == likelihood * impact, f"{row['risk_id']}: inherent score mismatch"
-        assert 1 <= residual <= inherent, f"{row['risk_id']}: invalid residual score"
+    reference_fields = [
+        (data["timeline"], "event_id", "source_ids"),
+        (data["claims"], "claim_id", "source_ids"),
+        (data["controls"], "control_id", "source_ids"),
+        (data["controls"], "control_id", "reference_ids"),
+        (data["recommendations"], "recommendation_id", "reference_ids"),
+    ]
+    for rows, key, field in reference_fields:
+        for row in rows:
+            refs = split_ids(row[field])
+            assert refs, f"{row[key]}: blank {field}"
+            unknown = set(refs) - source_ids
+            assert not unknown, f"{row[key]}: unknown source IDs {unknown}"
 
-    for row in data["controls"]:
-        assert set(split_ids(row["mapped_asset_id"])) <= asset_ids, f"{row['control_id']}: unknown asset"
-        assert set(split_ids(row["mapped_risk_id"])) <= risk_ids, f"{row['control_id']}: unknown risk"
 
-    for row in data["assessments"]:
-        assert row["control_id"] in control_ids, f"{row['assessment_id']}: unknown control"
+def validate_claim_guardrails(data: dict[str, list[dict[str, str]]]) -> None:
+    timeline = data["timeline"]
+    claims = data["claims"]
+    controls = data["controls"]
+    recommendations = data["recommendations"]
 
-    for row in data["poam"]:
-        assert row["related_control_id"] in control_ids, f"{row['poam_id']}: unknown control"
-        assert set(split_ids(row["related_risk_id"])) <= risk_ids, f"{row['poam_id']}: unknown risk"
-        date.fromisoformat(row["target_date"])
+    timeline_dates = [(row["event_date"], int(row["event_order"])) for row in timeline]
+    assert timeline_dates == sorted(timeline_dates), "Timeline is not chronologically ordered"
+    assert next(row for row in timeline if row["event_id"] == "E-007")["evidence_classification"] == "Reported third-party claim"
 
-    for row in data["evidence"]:
-        assert row["control_id"] in control_ids, f"{row['evidence_id']}: unknown control"
-        assert row["assessment_id"] in assessment_ids, f"{row['evidence_id']}: unknown assessment"
-        assert row["poam_id"] in poam_ids, f"{row['evidence_id']}: unknown POA&M"
-        assert row["evidence_repository_path"] == "Not collected - synthetic case study", (
-            f"{row['evidence_id']}: unexpected evidence claim"
-        )
+    reported = [row for row in claims if row["classification"] == "Reported third-party claim"]
+    unknowns = [row for row in claims if row["classification"] == "Not publicly observable"]
+    assert len(reported) == 1 and reported[0]["claim_id"] == "C-009"
+    assert split_ids(reported[0]["source_ids"]) == ["S-004"]
+    assert len(unknowns) == 3
+    assert all(row["confidence"] == "Not assessable" for row in unknowns)
+
+    claim_groups = {
+        "Confirmed or attributed public evidence": sum(
+            row["classification"] not in {"Reported third-party claim", "Not publicly observable"}
+            for row in claims
+        ),
+        "Reported claim": len(reported),
+        "Not publicly observable": len(unknowns),
+    }
+    assert claim_groups == {
+        "Confirmed or attributed public evidence": 8,
+        "Reported claim": 1,
+        "Not publicly observable": 3,
+    }
+
+    control_summary = {
+        status: sum(row["observability_status"] == status for row in controls)
+        for status in {row["observability_status"] for row in controls}
+    }
+    assert control_summary == {
+        "Observed public action": 2,
+        "Partial public evidence": 3,
+        "Not publicly observable": 5,
+    }
+    assert all("failed" not in row["observability_status"].lower() for row in controls)
+    assert all(row["status"] == "Analyst proposal - not a BSI commitment" for row in recommendations)
+    assert sum(row["priority"] == "P1" for row in recommendations) == 5
+    assert sum(row["priority"] == "P2" for row in recommendations) == 3
+
+    prohibited = [
+        re.compile(r"lockbit definitely", re.IGNORECASE),
+        re.compile(r"attack entered through", re.IGNORECASE),
+        re.compile(r"controls? (?:definitely )?failed", re.IGNORECASE),
+        re.compile(r"forensic audit proved", re.IGNORECASE),
+    ]
+    for name in ["incident_timeline.csv", "evidence_claims.csv", "control_observability.csv", "recommendation_register.csv"]:
+        text = (DATA / name).read_text(encoding="utf-8")
+        assert not any(pattern.search(text) for pattern in prohibited), f"Unsupported assertion in {name}"
 
 
 def load_sqlite(data: dict[str, list[dict[str, str]]]) -> sqlite3.Connection:
     connection = sqlite3.connect(":memory:")
-    connection.execute("PRAGMA foreign_keys = ON")
-    connection.executescript((SQL_DIR / "01_create_tables.sql").read_text(encoding="utf-8"))
+    connection.executescript((SQL / "01_create_tables.sql").read_text(encoding="utf-8"))
     table_map = [
-        ("assets", data["assets"]),
-        ("controls", data["controls"]),
-        ("risks", data["risks"]),
-        ("assessments", data["assessments"]),
-        ("poam", data["poam"]),
-        ("evidence_tracker", data["evidence"]),
+        ("source_catalog", data["sources"]),
+        ("incident_timeline", data["timeline"]),
+        ("evidence_claims", data["claims"]),
+        ("control_observability", data["controls"]),
+        ("recommendation_register", data["recommendations"]),
     ]
     for table, rows in table_map:
         columns = list(rows[0].keys())
-        sql = f"INSERT INTO {table} ({','.join(columns)}) VALUES ({','.join('?' for _ in columns)})"
-        connection.executemany(sql, [[row[column] for column in columns] for row in rows])
+        placeholders = ",".join("?" for _ in columns)
+        insert = f"INSERT INTO {table} ({','.join(columns)}) VALUES ({placeholders})"
+        connection.executemany(insert, [[row[column] for column in columns] for row in rows])
     connection.commit()
-    connection.executescript((SQL_DIR / "03_grc_monitoring_queries.sql").read_text(encoding="utf-8"))
+    connection.executescript((SQL / "02_analysis_queries.sql").read_text(encoding="utf-8"))
     return connection
 
 
-def validate_sql_results(connection: sqlite3.Connection) -> None:
-    assert connection.execute("SELECT COUNT(*) FROM v_risk_control_overview").fetchone()[0] == 15
-    assert connection.execute("SELECT COUNT(*) FROM v_assessment_poam_evidence").fetchone()[0] == 15
-    summary = dict(connection.execute("SELECT metric, value FROM v_management_summary").fetchall())
-    expected = {
-        "assets_in_scope": 12,
-        "risks_assessed": 15,
-        "high_priority_risks": 8,
-        "controls_assessed": 15,
-        "high_severity_findings": 7,
-        "evidence_unavailable": 6,
-        "poam_open": 5,
-        "poam_in_progress": 4,
+def validate_sql(connection: sqlite3.Connection) -> None:
+    claim_summary = dict(connection.execute("SELECT claim_group, claim_count FROM v_claim_classification_summary"))
+    assert claim_summary == {
+        "Confirmed or attributed public evidence": 8,
+        "Reported claim": 1,
+        "Not publicly observable": 3,
     }
-    assert summary == expected, f"Management summary mismatch: {summary}"
+    control_summary = dict(connection.execute("SELECT observability_status, control_count FROM v_control_observability_summary"))
+    assert control_summary == {
+        "Observed public action": 2,
+        "Partial public evidence": 3,
+        "Not publicly observable": 5,
+    }
+    rec_count = connection.execute("SELECT SUM(recommendation_count) FROM v_recommendation_priority_summary").fetchone()[0]
+    assert rec_count == 8
+    source_usage = connection.execute("SELECT COUNT(*) FROM v_source_usage WHERE timeline_rows + claim_rows + control_rows + recommendation_rows > 0").fetchone()[0]
+    assert source_usage == 9
+
+
+def validate_artifacts() -> None:
+    images = [
+        ROOT / "assets" / "incident_timeline.png",
+        ROOT / "assets" / "evidence_classification.png",
+        ROOT / "assets" / "control_observability.png",
+        ROOT / "assets" / "recommendation_priority.png",
+    ]
+    for path in images:
+        assert path.exists() and path.stat().st_size > 10_000, f"Missing or small chart: {path.relative_to(ROOT)}"
+        with Image.open(path) as image:
+            assert image.size == (1600, 900), f"Unexpected chart dimensions: {path.name} {image.size}"
+            image.verify()
+
+    pdf = ROOT / "output" / "pdf" / "Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf"
+    assert pdf.exists() and pdf.stat().st_size > 50_000, "Missing or small PDF"
+    reader = PdfReader(str(pdf))
+    assert len(reader.pages) == 5, f"Expected 5 PDF pages, found {len(reader.pages)}"
+    page_text = [(page.extract_text() or "") for page in reader.pages]
+    expected = [
+        "Public-Evidence Banking Cyber Incident",
+        "Public incident chronology",
+        "Evidence classification and control observability",
+        "Proposed evidence and remediation priorities",
+        "Source register, method, and limitations",
+    ]
+    for index, phrase in enumerate(expected):
+        assert phrase in page_text[index], f"Page {index + 1} missing title: {phrase}"
+        assert len(page_text[index].strip()) > 250, f"Page {index + 1} has too little extractable text"
+
+    legacy = [
+        ROOT / "assets" / "grc_workflow.png",
+        ROOT / "assets" / "risk_heatmap.png",
+        ROOT / "assets" / "control_gap_summary.png",
+        ROOT / "assets" / "remediation_status_summary.png",
+        ROOT / "output" / "pdf" / "IT_GRC_Project_Summary.pdf",
+    ]
+    assert not any(path.exists() for path in legacy), "Legacy artifacts still exist"
+
+
+def validate_markdown_links() -> None:
+    pattern = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+    broken: list[str] = []
+    for path in ROOT.rglob("*.md"):
+        for target in pattern.findall(path.read_text(encoding="utf-8")):
+            target = target.strip().split("#", 1)[0]
+            if not target or target.startswith(("https://", "http://", "mailto:")):
+                continue
+            linked = (path.parent / unquote(target)).resolve()
+            if not linked.exists():
+                broken.append(f"{path.relative_to(ROOT)} -> {target}")
+    assert not broken, f"Broken local Markdown links: {broken}"
 
 
 def validate_repository_safety() -> None:
@@ -130,76 +238,47 @@ def validate_repository_safety() -> None:
         re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
         re.compile(r"(?i)\b(?:password|access_token|api_key)\s*=\s*[^\s<>{}\[\]]{8,}"),
     ]
-    excluded = {"validate_project.py"}
-    text_suffixes = {".md", ".csv", ".sql", ".py", ".txt", ".json", ".yml", ".yaml"}
+    suffixes = {".md", ".csv", ".sql", ".py", ".txt", ".json", ".yml", ".yaml"}
     findings: list[str] = []
     for path in ROOT.rglob("*"):
-        if not path.is_file() or path.suffix.lower() not in text_suffixes or path.name in excluded:
+        if not path.is_file() or path.suffix.lower() not in suffixes or path.name == "validate_project.py":
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         if any(pattern.search(text) for pattern in patterns):
             findings.append(str(path.relative_to(ROOT)))
-    assert not findings, f"Potential secrets found in: {findings}"
-
-
-def validate_repository_artifacts() -> None:
-    required = [
-        ROOT / "assets" / "grc_workflow.png",
-        ROOT / "assets" / "risk_heatmap.png",
-        ROOT / "assets" / "control_gap_summary.png",
-        ROOT / "assets" / "remediation_status_summary.png",
-        ROOT / "output" / "pdf" / "IT_GRC_Project_Summary.pdf",
-    ]
-    for path in required:
-        assert path.exists() and path.stat().st_size > 0, f"Missing artifact: {path.relative_to(ROOT)}"
-        signature = path.read_bytes()[:8]
-        if path.suffix.lower() == ".png":
-            assert signature == b"\x89PNG\r\n\x1a\n", f"Invalid PNG: {path.relative_to(ROOT)}"
-        elif path.suffix.lower() == ".pdf":
-            assert signature.startswith(b"%PDF-"), f"Invalid PDF: {path.relative_to(ROOT)}"
-
-
-def validate_markdown_links() -> None:
-    link_pattern = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
-    broken: list[str] = []
-    for path in ROOT.rglob("*.md"):
-        text = path.read_text(encoding="utf-8")
-        for target in link_pattern.findall(text):
-            target = target.strip().split("#", 1)[0]
-            if not target or target.startswith(("http://", "https://", "mailto:")):
-                continue
-            linked_path = (path.parent / unquote(target)).resolve()
-            if not linked_path.exists():
-                broken.append(f"{path.relative_to(ROOT)} -> {target}")
-    assert not broken, f"Broken local Markdown links: {broken}"
+    assert not findings, f"Potential secrets found: {findings}"
 
 
 def main() -> None:
     loaded = {name: read_csv(name) for name in SPECS}
-    for name, (id_field, expected_count) in SPECS.items():
-        assert_unique(loaded[name], id_field, expected_count, name)
+    validate_shape(loaded)
     data = {
-        "assets": loaded["asset_inventory.csv"],
-        "risks": loaded["risk_register.csv"],
-        "controls": loaded["control_matrix.csv"],
-        "assessments": loaded["control_assessment_results.csv"],
-        "poam": loaded["remediation_plan_poam.csv"],
-        "evidence": loaded["evidence_tracker.csv"],
+        "sources": loaded["source_catalog.csv"],
+        "timeline": loaded["incident_timeline.csv"],
+        "claims": loaded["evidence_claims.csv"],
+        "controls": loaded["control_observability.csv"],
+        "recommendations": loaded["recommendation_register.csv"],
     }
-    validate_relationships(data)
+    validate_sources(data)
+    validate_claim_guardrails(data)
     connection = load_sqlite(data)
-    validate_sql_results(connection)
-    validate_repository_safety()
-    validate_repository_artifacts()
+    validate_sql(connection)
+    validate_artifacts()
     validate_markdown_links()
+    validate_repository_safety()
+
     print("validation=passed")
-    print("csv_rows=87")
-    print("relationship_checks=passed")
-    print("risk_score_checks=passed")
-    print("sql_schema_and_queries=passed")
-    print("secret_scan=passed")
+    print("sources=9")
+    print("timeline_events=7")
+    print("evidence_claims=12")
+    print("control_domains=10")
+    print("recommendations=8")
+    print("source_traceability=passed")
+    print("claim_guardrails=passed")
+    print("sql_queries=passed")
     print("artifact_integrity=passed")
     print("markdown_links=passed")
+    print("secret_scan=passed")
 
 
 if __name__ == "__main__":
