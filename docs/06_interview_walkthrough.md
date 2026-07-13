@@ -2,7 +2,7 @@
 
 ## 60-second explanation
 
-> I built an independent IT GRC assessment using the real May 2023 BSI cyber incident. I collected official BSI and OJK disclosures, the audited year-end filing, Indonesian banking IT regulations, the PDP law, and NIST guidance. I separated confirmed facts, management statements, external claims, and unknowns. Then I mapped ten control domains and assessed only what was publicly observable. The main lesson was that lack of public evidence is not the same as a failed control. I proposed eight evidence-based remediation actions and built SQL queries, validation checks, management charts, and a five-page report.
+> I built an independent IT GRC assessment using the real May 2023 BSI cyber incident. I collected official BSI and OJK disclosures, the audited year-end filing, Indonesian banking IT regulations, the PDP law, and NIST guidance. I separated confirmed facts, management statements, external claims, and unknowns. Then I mapped ten control domains and assessed only what was publicly observable. The main lesson was that lack of public evidence is not the same as a failed control. I proposed eight evidence-based remediation actions and produced an Excel audit workpaper, SQL checks, automated validation, and a six-page assessment memorandum.
 
 ## What to show first
 
@@ -32,7 +32,7 @@ Complete a forensic closure pack that links root cause, affected systems and dat
 
 ### What technical work did you do?
 
-I built normalized CSV datasets, a relational SQLite schema, monitoring queries, automated source-traceability and claim-guardrail checks, data-driven charts, and a generated PDF.
+I built normalized CSV datasets, a relational SQLite schema, monitoring queries, automated source-traceability and claim-guardrail checks, an Excel audit workpaper, and a generated PDF memorandum.
 
 ## Honest positioning
 

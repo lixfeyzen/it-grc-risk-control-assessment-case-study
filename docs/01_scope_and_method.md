@@ -50,7 +50,7 @@ What do public BSI, OJK, audited-filing, legal, regulatory, technical, and reput
 4. Map regulatory and technical expectations.
 5. Assess public observability rather than control effectiveness.
 6. Propose evidence-based actions with deliverables and suggested owners.
-7. Validate citation coverage, wording guardrails, SQL outputs, charts, and PDF rendering.
+7. Validate citation coverage, wording guardrails, SQL outputs, workbook structure, and PDF rendering.
 
 ## Success criteria
 
@@ -58,7 +58,7 @@ What do public BSI, OJK, audited-filing, legal, regulatory, technical, and reput
 - No confirmed-fact metric includes LockBit's unverified claim.
 - No missing public disclosure is called a failed control.
 - Recommendations are labelled as analyst proposals.
-- All charts are generated from repository data and use a neutral report style.
-- The PDF is readable and contains no unsupported claim.
+- The Excel workpaper is generated from repository data and contains no decorative chart.
+- The PDF uses a plain audit-memorandum layout and contains no unsupported claim.
 
 Source details are in [`../data/source_catalog.csv`](../data/source_catalog.csv).

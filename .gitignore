@@ -5,3 +5,4 @@ __pycache__/
 *.sqlite
 tmp/
 output/pdf/rendered/
+*.inspect.ndjson

@@ -3,30 +3,41 @@
 ## Requirements
 
 - Python 3.11 or later
-- `Pillow`, `reportlab`, and `pypdf`
-- Poppler only when re-rendering the PDF for visual inspection
+- `reportlab` and `pypdf`
+- Poppler only for optional PDF rendering
+- Node.js and `@oai/artifact-tool` only when rebuilding the Excel workpaper
 
-## Install
+## Install Python dependencies
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-## Generate charts and PDF
+## Generate the audit memorandum
 
 ```powershell
-python scripts\generate_artifacts.py
+python scripts\generate_audit_memo.py
 ```
 
-Expected files:
+Expected file:
 
 ```text
-assets/incident_timeline.png
-assets/evidence_classification.png
-assets/control_observability.png
-assets/recommendation_priority.png
-output/pdf/Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf
+output/pdf/BSI_Public_Evidence_GRC_Assessment_Memo.pdf
 ```
+
+## Rebuild the Excel workpaper
+
+```powershell
+node scripts\build_grc_workpaper.mjs
+```
+
+Expected file:
+
+```text
+output/workbook/BSI_Public_Evidence_GRC_Workpaper.xlsx
+```
+
+The workbook builder also renders all six worksheets to `tmp/workbook-renders/` for visual inspection. Temporary previews are ignored by Git.
 
 ## Validate
 
@@ -46,7 +57,9 @@ recommendations=8
 source_traceability=passed
 claim_guardrails=passed
 sql_queries=passed
-artifact_integrity=passed
+workbook_integrity=passed
+pdf_integrity=passed
+no_infographics=passed
 markdown_links=passed
 secret_scan=passed
 ```
@@ -54,7 +67,7 @@ secret_scan=passed
 ## Optional PDF visual check
 
 ```powershell
-pdftoppm -png output\pdf\Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf tmp\pdfs\public-evidence-grc
+pdftoppm -png output\pdf\BSI_Public_Evidence_GRC_Assessment_Memo.pdf tmp\pdfs\bsi-grc-memo
 ```
 
-Inspect every rendered page for clipped text, overlap, unreadable tables, or inconsistent spacing.
+Inspect all six pages for clipped text, overlapping rows, unreadable tables, or missing headers and footers.

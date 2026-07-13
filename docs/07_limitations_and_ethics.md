@@ -13,8 +13,8 @@
 - No alleged leaked data was accessed, downloaded, inspected, or redistributed.
 - No BSI system was scanned, tested, or contacted.
 - No employee or customer personal information is stored.
-- No logos, stock incident imagery, or AI-generated cyberattack illustrations are used.
-- Visuals are generated only from repository tables.
+- No logos, stock incident imagery, AI-generated illustration, dashboard, or infographic is used.
+- Recruiter-facing outputs use an audit workpaper and a black-and-white memorandum.
 
 ## Wording guardrails
 

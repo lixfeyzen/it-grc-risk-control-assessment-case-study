@@ -6,11 +6,12 @@ from __future__ import annotations
 import csv
 import re
 import sqlite3
+import zipfile
 from datetime import date
 from pathlib import Path
 from urllib.parse import unquote, urlparse
+from xml.etree import ElementTree
 
-from PIL import Image
 from pypdf import PdfReader
 
 
@@ -179,43 +180,78 @@ def validate_sql(connection: sqlite3.Connection) -> None:
     assert source_usage == 9
 
 
-def validate_artifacts() -> None:
-    images = [
-        ROOT / "assets" / "incident_timeline.png",
-        ROOT / "assets" / "evidence_classification.png",
-        ROOT / "assets" / "control_observability.png",
-        ROOT / "assets" / "recommendation_priority.png",
-    ]
-    for path in images:
-        assert path.exists() and path.stat().st_size > 10_000, f"Missing or small chart: {path.relative_to(ROOT)}"
-        with Image.open(path) as image:
-            assert image.size == (1600, 900), f"Unexpected chart dimensions: {path.name} {image.size}"
-            image.verify()
+def validate_workbook() -> None:
+    workbook = ROOT / "output" / "workbook" / "BSI_Public_Evidence_GRC_Workpaper.xlsx"
+    assert workbook.exists() and workbook.stat().st_size > 15_000, "Missing or small Excel workpaper"
+    assert zipfile.is_zipfile(workbook), "Excel workpaper is not a valid XLSX package"
 
-    pdf = ROOT / "output" / "pdf" / "Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf"
-    assert pdf.exists() and pdf.stat().st_size > 50_000, "Missing or small PDF"
+    with zipfile.ZipFile(workbook) as archive:
+        names = set(archive.namelist())
+        assert "xl/workbook.xml" in names, "XLSX workbook metadata is missing"
+        assert "xl/worksheets/sheet1.xml" in names, "XLSX worksheets are missing"
+        workbook_xml = ElementTree.fromstring(archive.read("xl/workbook.xml"))
+        namespace = {"x": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+        sheet_names = [element.attrib["name"] for element in workbook_xml.findall(".//x:sheet", namespace)]
+        assert sheet_names == [
+            "Source_Catalog",
+            "Incident_Timeline",
+            "Evidence_Claims",
+            "Control_Observability",
+            "Recommendations",
+            "Cover",
+        ], f"Unexpected workbook sheets: {sheet_names}"
+
+        xml_text = "\n".join(
+            archive.read(name).decode("utf-8", errors="ignore")
+            for name in names
+            if name.endswith(".xml")
+        )
+        required_text = [
+            "PUBLIC-EVIDENCE INCIDENT ASSESSMENT WORKPAPER",
+            "COUNTA(Source_Catalog!A2:A10)",
+            "Not publicly observable",
+            "Analyst proposal - not a BSI commitment",
+        ]
+        for phrase in required_text:
+            assert phrase in xml_text, f"Workbook missing expected content: {phrase}"
+        assert not re.search(r"#(?:REF!|DIV/0!|VALUE!|NAME\?|N/A)", xml_text), "Workbook contains a formula error"
+
+
+def validate_pdf() -> None:
+    pdf = ROOT / "output" / "pdf" / "BSI_Public_Evidence_GRC_Assessment_Memo.pdf"
+    assert pdf.exists() and pdf.stat().st_size > 50_000, "Missing or small PDF memorandum"
     reader = PdfReader(str(pdf))
-    assert len(reader.pages) == 5, f"Expected 5 PDF pages, found {len(reader.pages)}"
+    assert len(reader.pages) == 6, f"Expected 6 PDF pages, found {len(reader.pages)}"
     page_text = [(page.extract_text() or "") for page in reader.pages]
     expected = [
-        "Public-Evidence Banking Cyber Incident",
+        "Assessment memorandum",
         "Public incident chronology",
-        "Evidence classification and control observability",
-        "Proposed evidence and remediation priorities",
-        "Source register, method, and limitations",
+        "Evidence claim register",
+        "Control observability working paper",
+        "Recommendation register",
+        "Source register and limitations",
     ]
     for index, phrase in enumerate(expected):
         assert phrase in page_text[index], f"Page {index + 1} missing title: {phrase}"
         assert len(page_text[index].strip()) > 250, f"Page {index + 1} has too little extractable text"
 
+
+def validate_no_infographics() -> None:
+    assets = ROOT / "assets"
+    assert not list(assets.glob("*.png")), "PNG infographic remains in assets/"
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "![" not in readme, "README still embeds an image"
+    assert ".png" not in readme.lower(), "README still references a PNG"
+
     legacy = [
-        ROOT / "assets" / "grc_workflow.png",
-        ROOT / "assets" / "risk_heatmap.png",
-        ROOT / "assets" / "control_gap_summary.png",
-        ROOT / "assets" / "remediation_status_summary.png",
-        ROOT / "output" / "pdf" / "IT_GRC_Project_Summary.pdf",
+        assets / "incident_timeline.png",
+        assets / "evidence_classification.png",
+        assets / "control_observability.png",
+        assets / "recommendation_priority.png",
+        ROOT / "output" / "pdf" / "Public_Evidence_Banking_Cyber_Incident_GRC_Assessment.pdf",
+        ROOT / "scripts" / "generate_artifacts.py",
     ]
-    assert not any(path.exists() for path in legacy), "Legacy artifacts still exist"
+    assert not any(path.exists() for path in legacy), "Legacy infographic artifact remains"
 
 
 def validate_markdown_links() -> None:
@@ -263,7 +299,9 @@ def main() -> None:
     validate_claim_guardrails(data)
     connection = load_sqlite(data)
     validate_sql(connection)
-    validate_artifacts()
+    validate_workbook()
+    validate_pdf()
+    validate_no_infographics()
     validate_markdown_links()
     validate_repository_safety()
 
@@ -276,7 +314,9 @@ def main() -> None:
     print("source_traceability=passed")
     print("claim_guardrails=passed")
     print("sql_queries=passed")
-    print("artifact_integrity=passed")
+    print("workbook_integrity=passed")
+    print("pdf_integrity=passed")
+    print("no_infographics=passed")
     print("markdown_links=passed")
     print("secret_scan=passed")
 
